@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Language Editor</title>
+    <!-- Load the Monaco Editor styles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/editor/editor.main.min.css">
+    <style>
+        /* Custom styles for Monaco Editor */
+        .monaco-editor .token.comment {
+            color: green;
+        }
+
+        .monaco-editor .token.string {
+            color: blue;
+        }
+
+        .monaco-editor .token.keyword {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor" style="width:800px;height:600px;"></div>
+
+    <!-- Load the Monaco Editor script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/editor/editor.main.nls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/editor/editor.main.min.js"></script>
+
+    <!-- Define your custom language -->
+    <script>
+        // Load the Monaco Editor
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs' }});
+        require(['vs/editor/editor.main'], function () {
+            // Define your special keywords, functions, and data types
+            const KEYWORDS = [
+                'var',
+                'and',
+                'or',
+                'not',
+                'if',
+                'elif',
+                'else',
+                'for',
+                'to',
+                'step',
+                'while',
+                'fun',
+                'then',
+                'end',
+                'return',
+                'continue',
+                'break'
+            ];
+
+            const FUNCTIONS = [
+                'show',
+                'pyexe',
+                'print_ret',
+                'get',
+                'get_int',
+                'clear',
+                'clr',
+                'is_num',
+                'is_str',
+                'is_list',
+                'is_fun',
+                'add',
+                'pop',
+                'extend',
+                'len',
+                'x3start'
+            ];
+
+            const DATA_TYPES = [
+                'null',
+                'true',
+                'false',
+                'math_PI'
+            ];
+
+            // Register your custom language
+            monaco.languages.register({ id: 'customLanguage' });
+
+            // Set up the token provider
+            monaco.languages.setMonarchTokensProvider('customLanguage', {
+                tokenizer: {
+                    root: [
+                        // Comments starting with #
+                        [/^#.*/, 'comment'],
+                        // Comments starting with //
+                        [/\/\/.*/, 'comment'],
+                        // Strings
+                        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                        [/'([^'\\]|\\.)*$/, 'string.invalid'],
+                        [/"/, 'string', '@string'],
+                        [/'/, 'string', '@string'],
+                    ],
+                    string: [
+                        [/[^\\"]+/, 'string'],
+                        [/\\./, 'string.escape'],
+                        [/"/, 'string', '@pop'],
+                        [/$/, 'string', '@pop']
+                    ]
+                }
+            });
+
+            // Define the completion item provider
+            monaco.languages.registerCompletionItemProvider('customLanguage', {
+                provideCompletionItems: function(model, position) {
+                    // Define your completion items
+                    var suggestions = [];
+                    KEYWORDS.forEach(function(keyword) {
+                        suggestions.push({
+                            label: keyword,
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: keyword
+                        });
+                    });
+                    FUNCTIONS.forEach(function(func) {
+                        suggestions.push({
+                            label: func,
+                            kind: monaco.languages.CompletionItemKind.Function,
+                            insertText: func
+                        });
+                    });
+                    DATA_TYPES.forEach(function(type) {
+                        suggestions.push({
+                            label: type,
+                            kind: monaco.languages.CompletionItemKind.Class,
+                            insertText: type
+                        });
+                    });
+                    return { suggestions: suggestions };
+                }
+            });
+
+            // Create a Monaco Editor instance for your custom language
+            var editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '# Your custom language code here...',
+                language: 'customLanguage', // Use your custom language ID
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+        });
+    </script>
+</body>
+</html>

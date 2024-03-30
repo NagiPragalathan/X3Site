@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <!-- Load the Monaco Editor styles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/editor/editor.main.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f3f3;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .editor-container {
+            width: 48%;
+            margin-bottom: 20px;
+        }
+
+        label {
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition-duration: 0.4s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .readme-view {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="flex-container">
+            <!-- Left textarea for Solidity code -->
+            <div class="editor-container">
+                <label for="solidityCode">X3 Code:</label>
+                <div id="solidityEditor" style="height: 200px;"></div>
+            </div>
+            <!-- Right textarea for Rust code -->
+            <div class="editor-container">
+                <label for="rustCode">Rust/Solidity Code:</label>
+                <div id="rustEditor" style="height: 200px;"></div>
+            </div>
+        </div>
+        <!-- Dropdown menu to select language -->
+        <div>
+            <label for="languageSelect">Select Language:</label>
+            <select id="languageSelect" name="language">
+                <option value="solidity">Solidity</option>
+                <option value="rust">Rust</option>
+            </select>
+        </div>
+        <!-- Button to convert code -->
+        <button id="convertButton">Convert</button>
+        <!-- Div to display README content -->
+        <div>
+            <label for="readmeView">README View:</label>
+            <div id="readmeView" class="readme-view">
+                <!-- README content will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the Monaco Editor script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/editor/editor.main.nls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs/editor/editor.main.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    
+
+    <!-- Initialize Monaco Editor -->
+    <script>
+        // Initialize Monaco Editor
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.23.0/min/vs' }});
+        require(['vs/editor/editor.main'], function () {
+            // Define your special keywords, functions, and data types
+            const KEYWORDS = [
+                'var',
+                'and',
+                'or',
+                'not',
+                'if',
+                'elif',
+                'else',
+                'for',
+                'to',
+                'step',
+                'while',
+                'fun',
+                'then',
+                'end',
+                'return',
+                'continue',
+                'break'
+            ];
+
+            const FUNCTIONS = [
+                'show',
+                'pyexe',
+                'print_ret',
+                'get',
+                'get_int',
+                'clear',
+                'clr',
+                'is_num',
+                'is_str',
+                'is_list',
+                'is_fun',
+                'add',
+                'pop',
+                'extend',
+                'len',
+                'x3start'
+            ];
+
+            const DATA_TYPES = [
+                'null',
+                'true',
+                'false',
+                'math_PI'
+            ];
+
+            // Register your custom language
+            monaco.languages.register({ id: 'customLanguage' });
+
+            // Set up the token provider
+            monaco.languages.setMonarchTokensProvider('customLanguage', {
+                tokenizer: {
+                    root: [
+                        // Comments starting with #
+                        [/^#.*/, 'comment'],
+                        // Comments starting with //
+                        [/\/\/.*/, 'comment'],
+                        // Strings
+                        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                        [/'([^'\\]|\\.)*$/, 'string.invalid'],
+                        [/"/, 'string', '@string'],
+                        [/'/, 'string', '@string'],
+                        // Keywords
+                        [/\b(var|and|or|not|if|elif|else|for|to|step|while|fun|then|end|return|continue|break)\b/, 'keyword'],
+                        // Functions
+                        [/\b(show|pyexe|print_ret|get|get_int|clear|clr|is_num|is_str|is_list|is_fun|add|pop|extend|len|x3start)\b/, 'function']
+                    ],
+                    string: [
+                        [/[^\\"]+/, 'string'],
+                        [/\\./, 'string.escape'],
+                        [/"/, 'string', '@pop'],
+                        [/$/, 'string', '@pop']
+                    ]
+                }
+            });
+
+            // Define the completion item provider
+            monaco.languages.registerCompletionItemProvider('customLanguage', {
+                provideCompletionItems: function(model, position) {
+                    // Define your completion items
+                    var suggestions = [];
+                    KEYWORDS.forEach(function(keyword) {
+                        suggestions.push({
+                            label: keyword,
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: keyword
+                        });
+                    });
+                    FUNCTIONS.forEach(function(func) {
+                        suggestions.push({
+                            label: func,
+                            kind: monaco.languages.CompletionItemKind.Function,
+                            insertText: func
+                        });
+                    });
+                    DATA_TYPES.forEach(function(type) {
+                        suggestions.push({
+                            label: type,
+                            kind: monaco.languages.CompletionItemKind.Class,
+                            insertText: type
+                        });
+                    });
+                    return { suggestions: suggestions };
+                }
+            });
+
+            // Create a Monaco Editor instance for your custom language
+            var solidityEditor = monaco.editor.create(document.getElementById('solidityEditor'), {
+                value: '// Solidity code here...',
+                language: 'customLanguage', // Use your custom language ID
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+
+            // Create a Monaco Editor instance for Rust language
+            var rustEditor = monaco.editor.create(document.getElementById('rustEditor'), {
+                value: '// Rust code here...',
+                language: 'rust',
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+
+            // Get the language select dropdown
+            var languageSelect = document.getElementById('languageSelect');
+
+            // Event listener for language select dropdown change
+            languageSelect.addEventListener('change', function () {
+                // Determine the selected language
+                var selectedLanguage = this.value;
+
+                // Set the language of the editors based on the selected language
+                if (selectedLanguage === 'solidity') {
+                    solidityEditor.updateOptions({ language: 'customLanguage' });
+                } else if (selectedLanguage === 'rust') {
+                    rustEditor.updateOptions({ language: 'rust' });
+                }
+            });
+
+            // Function to handle code conversion and update README view
+            function convertCode() {
+                // Get the content of the left editor (Solidity code)
+                var solidityCode = solidityEditor.getValue();
+                var selectElement = document.getElementById("languageSelect");
+                var selectedValue = selectElement.value;
+                var requestBody = "text_data=" + encodeURIComponent(solidityCode);
+                requestBody += "&selected_language=" + encodeURIComponent(selectedValue);
+
+
+                // Make the fetch request
+                fetch("generate_solidity_code", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: requestBody
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Access the solidity code from the response
+                    var solidityCode = data.solidity_code;
+                    if (solidityCode.startsWith("```") && solidityCode.endsWith("```")) {
+                        solidityCode = solidityCode.substring(3, solidityCode.length - 3);
+                    }
+                    rustEditor.setValue(solidityCode);
+
+                    document.getElementById('readmeView').innerHTML = data.explain;
+
+                    console.log(solidityCode)
+                })
+                .catch(error => {
+                    console.error("There was a problem with the fetch operation:", error);
+                });
+                // Set the content of the right editor (Rust code)
+            }
+
+            // Get the convert button
+            var convertButton = document.getElementById('convertButton');
+
+            // Event listener for convert button click
+            convertButton.addEventListener('click', convertCode);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <!-- Include CodeMirror styles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
+    <!-- Include CodeMirror themes (choose your preferred theme) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/dracula.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f3f3;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .editor-container {
+            width: 48%;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        label {
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition-duration: 0.4s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .readme-view {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+        }
+        .solidity-editor .CodeMirror { background: #282a36; color: white; }
+        .rust-editor .CodeMirror { background: #282c34; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="flex-container">
+            <!-- Left textarea for Solidity code -->
+            <div class="editor-container">
+                <label for="solidityCode">Solidity Code:</label>
+                <textarea id="solidityCode" name="solidityCode">// Solidity code here...</textarea>
+            </div>
+            <!-- Right textarea for Rust code -->
+            <div class="editor-container">
+                <label for="rustCode">Rust Code:</label>
+                <textarea id="rustCode" name="rustCode">// Rust code here...</textarea>
+            </div>
+        </div>
+        <!-- Dropdown menu to select language -->
+        <div>
+            <label for="languageSelect">Select Language:</label>
+            <select id="languageSelect" name="language">
+                <option value="solidity">Solidity</option>
+                <option value="rust">Rust</option>
+            </select>
+        </div>
+        <!-- Button to convert code -->
+        <button id="convertButton">Convert</button>
+        <!-- Div to display README content -->
+        <div>
+            <label for="readmeView">README View:</label>
+            <div id="readmeView" class="readme-view">
+                <!-- README content will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Include CodeMirror library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
+    <!-- Include the language modes (Solidity and Rust) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/solidity/solidity.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/rust/rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/3.0.5/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+
+    <!-- Initialize CodeMirror -->
+    <script>
+        // Get the textarea elements
+        var solidityCodeTextarea = document.getElementById('solidityCode');
+        var rustCodeTextarea = document.getElementById('rustCode');
+        var readmeViewDiv = document.getElementById('readmeView');
+
+        // Initialize CodeMirror for Solidity
+        var solidityEditor = CodeMirror.fromTextArea(solidityCodeTextarea, {
+            lineNumbers: true,          // Show line numbers
+            mode: 'solidity',           // Specify Solidity mode
+            theme: 'dracula',           // Choose your preferred theme
+            className: 'solidity-editor' // Set a class for Solidity editor
+        });
+
+        // Initialize CodeMirror for Rust
+        var rustEditor = CodeMirror.fromTextArea(rustCodeTextarea, {
+            lineNumbers: true,          // Show line numbers
+            mode: 'rust',               // Specify Rust mode
+            theme: 'dracula',           // Choose your preferred theme
+            className: 'rust-editor'    // Set a class for Rust editor
+        });
+
+        // Get the language select dropdown
+        var languageSelect = document.getElementById('languageSelect');
+
+        // Event listener for language select dropdown change
+        languageSelect.addEventListener('change', function() {
+            // Determine the selected language
+            var selectedLanguage = this.value;
+
+            // Set the mode of the editors based on the selected language
+            if (selectedLanguage === 'solidity') {
+                solidityEditor.setOption('mode', 'solidity');
+                rustEditor.setOption('mode', null); // Disable Rust mode
+            } else if (selectedLanguage === 'rust') {
+                solidityEditor.setOption('mode', null); // Disable Solidity mode
+                rustEditor.setOption('mode', 'rust');
+            }
+        });
+
+        // Function to handle code conversion and update README view
+        function convertCode() {
+            // Get the content of the left textarea (Solidity code)
+            var solidityCode = solidityEditor.getValue();
+            // Set the content of the right textarea (Rust code)
+            rustEditor.setValue(solidityCode);
+            var converter = new showdown.Converter();
+
+            // Convert Markdown to HTML using showdown.js
+            var htmlContent = converter.makeHtml(solidityCode);
+
+            readmeViewDiv.innerHTML = htmlContent;
+        }
+
+        // Get the convert button
+        var convertButton = document.getElementById('convertButton');
+
+        // Event listener for convert button click
+        convertButton.addEventListener('click', convertCode);
+    </script>
+</body>
+</html>
