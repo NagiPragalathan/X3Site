@@ -16,6 +16,13 @@ import os
 import json
 import markdown
 from langchain.llms import OpenAI
+from base.models import MyModel
+
+
+import os
+import io
+import zipfile
+from django.http import HttpResponse
 
 
 load_dotenv()
@@ -63,10 +70,35 @@ def generate_solidity_code(request):
         llm = OpenAI(openai_api_key=os.environ['OPENAI_API_KEY'],temperature=0.6)
         text = f"Expalin the {code} clearly."
         explain = llm.predict(text)
-        
 
         html_content = markdown.markdown(explain)
+        model_data = MyModel(code=code,explain=explain)
+        model_data.save()
+        print(code, explain)
         # Return the sample solidity code as JSON response
         return JsonResponse({'solidity_code': code, 'explain':html_content})
     else:
         return HttpResponseBadRequest("Only POST requests are allowed.")
+
+
+
+def compress_and_download_folder(request):
+    # Create a zip file in memory
+    zip_buffer = io.BytesIO()
+    model = MyModel.objects.all()[::-1][0]
+    with open("VaraBase/README.md", "w") as f:
+        f.write(model.explain)
+    with open("VaraBase/src/lib.rs", "w") as f:
+        f.write(model.code)
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Walk through the directory and add all files to the zip archive
+        for foldername, _, filenames in os.walk("VaraBase"):
+            for filename in filenames:
+                filepath = os.path.join(foldername, filename)
+                arcname = os.path.relpath(filepath, "VaraBase")
+                zip_file.write(filepath, arcname)
+
+    # Create the HTTP response
+    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename="compressed_folder.zip"'
+    return response

@@ -21,5 +21,6 @@ from base.views import *
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("compile",compile,name="compile"),
-    path("generate_solidity_code",generate_solidity_code,name="generate_solidity_code")
+    path("generate_solidity_code",generate_solidity_code,name="generate_solidity_code"),
+    path("download_x3site_zip",compress_and_download_folder,name="download_x3site_zip")
 ]
