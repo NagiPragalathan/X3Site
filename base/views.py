@@ -36,10 +36,15 @@ def generate_solidity_code(request):
         # Get the text data from the request body
         text_data = request.POST.get('text_data', '')
         lang = request.POST.get('selected_language', '')
+        api = request.POST.get('api_val', '')
+        print(text_data, lang, api)
         if not text_data:
             return HttpResponseBadRequest("Text data is required.")
         
-        api_key = os.getenv("OPENAI_API_KEY")
+        if api:
+            api_key = api
+        else:
+            api_key = os.getenv("OPENAI_API_KEY")
         llm = ChatOpenAI(api_key=api_key)
         
         # Define the chat prompt template

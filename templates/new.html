@@ -39,7 +39,7 @@
             display: block;
         }
 
-        select {
+        select, #api {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
@@ -91,6 +91,7 @@
                 <option value="solidity">Solidity</option>
                 <option value="rust">Rust</option>
             </select>
+            <input type="text" placeholder="Api Key" id="api">
         </div>
         <!-- Button to convert code -->
         <button id="convertButton" style="margin-top:10px; margin-bottom:10px">Convert</button>
@@ -225,7 +226,7 @@
 
             // Create a Monaco Editor instance for your custom language
             var solidityEditor = monaco.editor.create(document.getElementById('solidityEditor'), {
-                value: '// Solidity code here...',
+                value: '// X3 code here...',
                 language: 'customLanguage', // Use your custom language ID
                 theme: 'vs-dark',
                 automaticLayout: true
@@ -260,9 +261,11 @@
                 // Get the content of the left editor (Solidity code)
                 var solidityCode = solidityEditor.getValue();
                 var selectElement = document.getElementById("languageSelect");
+                var Apival = document.getElementById("api").value;
                 var selectedValue = selectElement.value;
                 var requestBody = "text_data=" + encodeURIComponent(solidityCode);
                 requestBody += "&selected_language=" + encodeURIComponent(selectedValue);
+                requestBody += "&api_val=" + encodeURIComponent(Apival);
 
 
                 // Make the fetch request
